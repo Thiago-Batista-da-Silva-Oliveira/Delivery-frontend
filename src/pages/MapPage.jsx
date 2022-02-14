@@ -1,4 +1,5 @@
-import React, {useState} from "react";
+
+ import React, {useState} from "react";
 import {
   GoogleMap,
   Marker,
@@ -46,7 +47,8 @@ const MapPage = () => {
   );
 
 
-  const [data, setData] = useState([])
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
 
 
 
@@ -54,8 +56,6 @@ const MapPage = () => {
   const [destination, setDestination] =
     React.useState(null);
 
-  const [response, setResponse] =
-    React.useState(null);
 
   const position = {
     lat: -27.590824,
@@ -108,45 +108,67 @@ const MapPage = () => {
       setOrigin(pointA);
       setDestination(pointB);
     }
-    
-   
-
   };
-
-  const directionsServiceOptions =
-    // @ts-ignore
-    React.useMemo(() => {
-      return {
-        origin,
-        destination,
-        travelMode: "DRIVING",
-      };
-    }, [origin, destination]);
-
-  const directionsCallback = React.useCallback((res) => {
-    if (res !== null && res.status === "OK") {
-      setResponse(res);
-    } else {
-      console.log(res);
-    }
-  }, []);
-
-  const directionsRendererOptions = React.useMemo(() => {
-    return {
-      directions: response,
-    };
-  }, [response]);
 
   const handleMore = () => {
     setDestinationAmount([...destinationAmount, {id: uuidv4()}])
   }
 
-  const handleFetch = async() => {
-       const response = await axios.post('http://localhost:4000/distance', {pointA, destinationValues})
-       
-       setData(response.data)
+  const [showSearchBox, setShowSearchBox] = useState(true)
 
+  const handleFetch = async() => {
+    setLoading(true)
+    try{
+      const response = await axios.post('http://localhost:4000/distance', {pointA, destinationValues})
+      setData(response.data)
+      setShowSearchBox(false)
+    } catch(err) {
+      console.log(err)
+    }
+     
+    setLoading(false)
   }
+
+  const [dest1, setDest1] = useState(null)
+  const [dest2, setDest2] = useState(null)
+
+  const handleDistinationClick = async(index) => {
+    if(index !== 0) {
+      setDest1(data[index - 1].destination.normalize('NFD').replace(/[\u0300-\u036f]/g, ""))
+    }
+
+    if(index == 0) {
+      setDest1(pointA.normalize('NFD').replace(/[\u0300-\u036f]/g, ""))
+    }
+   
+    setDest2(data[index].destination.normalize('NFD').replace(/[\u0300-\u036f]/g, ""))
+  }
+
+  const [response, setResponse ] = useState(null)
+
+  const directionsServiceOptions =
+  // @ts-ignore
+  React.useMemo(() => {
+    return {
+      origin: dest1,
+      destination: dest2,
+      travelMode: "DRIVING",
+    };
+  }, [dest1, dest2]);
+
+const directionsCallback = React.useCallback((res) => {
+  if (res !== null && res.status === "OK") {
+    setResponse(res);
+  } else {
+    console.log(res);
+  }
+}, []);
+
+const directionsRendererOptions = React.useMemo(() => {
+  return {
+    directions: response,
+  };
+}, [response]);
 
   return (
     <div className="map">
@@ -160,55 +182,78 @@ const MapPage = () => {
           center={position}
           zoom={15}
         >
-          <div className="address">
-            <StandaloneSearchBox
-              onLoad={onLoadA}
-              onPlacesChanged={onPlacesChangedA}
-              setManualOrigin={() => setManualOrigin(!manualOrigin)}
-              onChooseLocation={(data, { geometry }) => {
-                const {
-                  location: { lat: latitude, lng: longitude },
-                } = geometry;
-
-                setOriginInfo({
-                  latitude,
-                  longitude,
-                  address: data.description,
-                });
-              }}
-            >
-              <input
-                className="addressField"
-                placeholder="Digite o endereço inicial"
-              />
-            </StandaloneSearchBox>
-           {
-             destinationAmount.map(() => (
-              <SearchDestinations points={points} setPoints={setPoints} setDestinationValues={setDestinationValues} destinationValues={destinationValues} />
-             ))
-           }
-
-        
-          <button onClick={() =>handleMore()}>+</button>
-          
-            <button onClick={() =>handleFetch()}>Traçar rota</button>
-          </div>
+          {showSearchBox && (
+                 <div className="address">
+                 <StandaloneSearchBox
+                   onLoad={onLoadA}
+                   onPlacesChanged={onPlacesChangedA}
+                   setManualOrigin={() => setManualOrigin(!manualOrigin)}
+                   onChooseLocation={(data, { geometry }) => {
+                     const {
+                       location: { lat: latitude, lng: longitude },
+                     } = geometry;
+     
+                     setOriginInfo({
+                       latitude,
+                       longitude,
+                       address: data.description,
+                     });
+                   }}
+                 >
+                   <input
+                     className="addressField"
+                     placeholder="Digite o endereço inicial"
+                   />
+                 </StandaloneSearchBox>
+                {
+                  destinationAmount.map(() => (
+                   <SearchDestinations points={points} setPoints={setPoints} setDestinationValues={setDestinationValues} destinationValues={destinationValues} />
+                  ))
+                }
+     
+     {loading && <span >Carregando...</span>}
+     
+                <div style={{display: 'flex', flexDirection: 'column', width: '100%'}}>
+               <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: 'green', color: 'white', textTransform: 'uppercase', marginTop: '10px'}} onClick={() =>handleMore()}>Adicionar mais endereços</button>
+               
+                 <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: '#5F9EA0', color: 'white', marginTop: '10px', textTransform: 'uppercase'}} onClick={() =>handleFetch()}>Planejar rota</button>
+                 </div>
+               </div>
+          )}
+         
+         {
+           !showSearchBox && (
+             <div style={{position: 'absolute', top: '20px', left: '50%'}}>
+                <div onClick={() => setShowSearchBox(true) } style={{padding: '10px', background: 'green', color: 'white', cursor: 'pointer'}}>
+                    <span style={{fontSize: '20px'}}>Buscar mais</span>
+                </div>
+             </div>
+           )
+         }
 
           
 
           {!response && pointA && <Marker position={pointA} />}
           {!response && pointB && <Marker position={pointB} />}
+          
          { data && (
-          <div style={{display: 'flex', flexDirection: 'column', position:'absolute', top: '10px', left: '20px', height: '500px', width: '500px', background: 'white', justifyContent: 'space-around'}}>
+          <div style={{display: 'flex', padding: '10px', flexDirection: 'column', position:'absolute', top: '10px', left: '20px', background: 'white', width: '400px', justifyContent: 'space-around'}}>
          {data.map((info, index) => (
           
-             <div style={{display: 'flex'}}>
-                 <span>{index + 1}°</span> - <span>{info.destination}</span> - <span>{info.time} segundos</span>
+             <div onClick={() => handleDistinationClick(index)}  key={index} style={{cursor: 'pointer',display: 'flex', padding: '10px', marginTop: '5px', border: '1px solid gray', alignItems: 'center', justifyContent: 'center'}}>
+                 <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px'}}>{index + 1}°</div> - <span>{info.destination}</span><span style={{display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px'}}>{(info.time / 60).toFixed(2)} minutos</span>
              </div>
           
          ))}
           </div>
          )}
+
+{dest1 && dest2 && (
+            <DirectionsService
+              options={directionsServiceOptions}
+              callback={directionsCallback}
+            />
+          )} 
           
 
           {response && directionsRendererOptions && (
