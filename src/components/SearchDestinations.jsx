@@ -8,6 +8,7 @@ import {
     DistanceMatrixService
   } from "@react-google-maps/api";
   import {useState} from 'react'
+  import "../pages/MapPage.css"
 
 export const SearchDestinations = ({setDestinationValues, destinationValues,points,setPoints}) => {
     const [searchBox, setSearchBox] = useState(null)
@@ -40,17 +41,18 @@ export const SearchDestinations = ({setDestinationValues, destinationValues,poin
     
     return (
         <>
-        <div style={{display: 'flex'}}>
+        <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
  <StandaloneSearchBox
     onLoad={onLoadB}
     onPlacesChanged={onPlacesChangedB}
    >
     <input
     className="addressField"
+    style= {{width: '305px'}}
     placeholder="Digite o endereço"
   />
 </StandaloneSearchBox>
-  <button onClick={() => handleClick() } style={{background: confirmed ? 'green' : 'gray', height: '20px' }}>X</button>
+  <button onClick={() => handleClick() } style={{background: confirmed ? 'green' : 'gray', border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', borderRadius: '50%', color: 'white' }}><i class="fa-solid fa-check"></i></button>
   </div>
         </>
     )
