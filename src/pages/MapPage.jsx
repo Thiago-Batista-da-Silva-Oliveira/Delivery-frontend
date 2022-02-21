@@ -1,5 +1,5 @@
 
- import React, {useState} from "react";
+import React, {useState} from "react";
 import {
   GoogleMap,
   Marker,
@@ -14,6 +14,7 @@ import "./MapPage.css";
 import { SearchDestinations } from "../components/SearchDestinations";
 import axios from 'axios'
 import { v4 as uuidv4 } from 'uuid';
+import { Box } from "@mui/material";
 
 
 
@@ -23,11 +24,11 @@ const MapPage = () => {
   const [destinationAmount, setDestinationAmount] = useState([{id: uuidv4()},])
 
   const [destinationValues, setDestinationValues] = useState([])
+  const [priorityDestinationValues, setPriorityDestinationValues] = useState([])
+  const [lastPriorityDestinationValues, setLastPriorityDestinationValues] = useState([])
 
+  const [lastValue, setLastValue] = useState(null)
 
-  const [addStop, setAddStop] = useState(null);
-  const [duration, setDuration] = useState(null);
-  const [distance, setDistance] = useState(null);
   const [map, setMap] = React.useState();
   const [searchBoxA, setSearchBoxA] =
     React.useState();
@@ -72,6 +73,28 @@ const MapPage = () => {
 
   const onLoadB = (ref) => {
     setSearchBoxB(ref);
+  };
+
+
+  const [searchBoxLast, setSearchBoxLast] = useState()
+
+  const onLoadLast = (ref) => {
+    setSearchBoxLast(ref);
+  };
+
+  const onPlacesChangedLast = () => {
+    const places = searchBoxLast.getPlaces();
+  
+    const place = places[0];
+    const location = {
+      lat: place?.geometry?.location?.lat() || 0,
+      lng: place?.geometry?.location?.lng() || 0,
+    };
+    setLastValue(place.formatted_address);
+    setOrigin(null);
+    setDestination(null);
+    setResponse(null);
+    map?.panTo(location);
   };
 
   const onPlacesChangedA = () => {
@@ -119,9 +142,10 @@ const MapPage = () => {
   const handleFetch = async() => {
     setLoading(true)
     try{
-      const response = await axios.post('http://localhost:4000/distance', {pointA, destinationValues})
-      setData(response.data)
-      setShowSearchBox(false)
+     const response = await axios.post('http://localhost:4000/distance', {pointA, destinationValues, lastValues: lastPriorityDestinationValues, priorities: priorityDestinationValues})
+     setData(response.data)
+     setShowSearchBox(false)
+   
     } catch(err) {
       console.log(err)
     }
@@ -159,9 +183,7 @@ const MapPage = () => {
 const directionsCallback = React.useCallback((res) => {
   if (res !== null && res.status === "OK") {
     setResponse(res);
-  } else {
-    console.log(res);
-  }
+  } 
 }, []);
 
 const directionsRendererOptions = React.useMemo(() => {
@@ -169,6 +191,15 @@ const directionsRendererOptions = React.useMemo(() => {
     directions: response,
   };
 }, [response]);
+
+const [searchLast, setSearchLast] = useState(false)
+
+const handleLast = () => {
+  setSearchLast(true)
+}
+
+const [priorities, setPriorities] = useState(false)
+const [lastPriorities, setLastPriorities] = useState(false)
 
   return (
     <div className="map">
@@ -182,46 +213,49 @@ const directionsRendererOptions = React.useMemo(() => {
           center={position}
           zoom={15}
         >
-          {showSearchBox && (
-                 <div className="address">
-                 <StandaloneSearchBox
-                   onLoad={onLoadA}
-                   onPlacesChanged={onPlacesChangedA}
-                   setManualOrigin={() => setManualOrigin(!manualOrigin)}
-                   onChooseLocation={(data, { geometry }) => {
-                     const {
-                       location: { lat: latitude, lng: longitude },
-                     } = geometry;
-     
-                     setOriginInfo({
-                       latitude,
-                       longitude,
-                       address: data.description,
-                     });
-                   }}
-                 >
-                   <input
-                     className="addressField"
-                     placeholder="Digite o endereço inicial"
-                   />
-                 </StandaloneSearchBox>
-                {
-                  destinationAmount.map(() => (
-                   <SearchDestinations points={points} setPoints={setPoints} setDestinationValues={setDestinationValues} destinationValues={destinationValues} />
-                  ))
-                }
-     
-     {loading && <span >Carregando...</span>}
-     
-                <div style={{display: 'flex', flexDirection: 'column', width: '100%'}}>
-               <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: 'green', color: 'white', textTransform: 'uppercase', marginTop: '10px'}} onClick={() =>handleMore()}>Adicionar mais endereços</button>
-               
-                 <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: '#5F9EA0', color: 'white', marginTop: '10px', textTransform: 'uppercase'}} onClick={() =>handleFetch()}>Planejar rota</button>
-                 </div>
-               </div>
-          )}
+                <Box className="address">
+                  <StandaloneSearchBox
+                    onLoad={onLoadA}
+                    onPlacesChanged={onPlacesChangedA}
+                    setManualOrigin={() => setManualOrigin(!manualOrigin)}
+                    onChooseLocation={(data, { geometry }) => {
+                      const {
+                        location: { lat: latitude, lng: longitude },
+                      } = geometry;
+      
+                      setOriginInfo({
+                        latitude,
+                        longitude,
+                        address: data.description,
+                      });
+                    }}
+                  >
+                    <input
+                      className="addressField"
+                      placeholder="Digite o endereço inicial"
+                    />
+                  </StandaloneSearchBox>
+                  
+                 {
+                   destinationAmount.map(() => (
+                    <SearchDestinations lastPriorityDestinationValues={lastPriorityDestinationValues} setLastPriorityDestinationValues={setLastPriorityDestinationValues} setPriorityDestinationValues={setPriorityDestinationValues} priorityDestinationValues={priorityDestinationValues} points={points} setPoints={setPoints} setDestinationValues={setDestinationValues} destinationValues={destinationValues} />
+                   ))
+                 }
+                
+      
+      {loading && <span >Carregando...</span>}
+      
+                 <Box style={{display: 'flex', flexDirection: 'column', width: '100%'}}>
+                <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: 'green', color: 'white', textTransform: 'uppercase', marginTop: '10px'}} onClick={() =>handleMore()}>Adicionar mais endereços</button>
+                  <button style={{border: 'none', outline: 'none', padding: '5px', cursor: 'pointer', background: '#5F9EA0', color: 'white', marginTop: '10px', textTransform: 'uppercase'}} onClick={() =>handleFetch()}>Planejar rota</button>
+                  </Box>
+                </Box>
+                
+           
+
          
          {
+           /*
            !showSearchBox && (
              <div style={{position: 'absolute', top: '20px', left: '50%'}}>
                 <div onClick={() => setShowSearchBox(true) } style={{padding: '10px', background: 'green', color: 'white', cursor: 'pointer'}}>
@@ -229,6 +263,7 @@ const directionsRendererOptions = React.useMemo(() => {
                 </div>
              </div>
            )
+           */
          }
 
           
@@ -266,3 +301,4 @@ const directionsRendererOptions = React.useMemo(() => {
 };
 
 export default MapPage;
+
