@@ -8,7 +8,6 @@
 
 .address {
   box-sizing: border-box;
-  width: 240px;
   padding: 12px;
   display: flex;
   flex-direction: column;
